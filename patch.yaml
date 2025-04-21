@@ -1,0 +1,7 @@
+- name: Test Patch
+  hosts: all
+  become: yes
+  tasks:
+    - name: Run apt update
+      apt:
+        update_cache: yes
