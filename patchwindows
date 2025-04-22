@@ -1,0 +1,13 @@
+- name: Install Windows Updates
+  hosts: all
+  tasks:
+    - name: Install all available updates
+      win_updates:
+        category_names:
+          - SecurityUpdates
+          - CriticalUpdates
+        reboot: yes
+
+    - name: Write proof file
+      win_shell: |
+        "Semaphore patched this system at {{ ansible_date_time.iso8601 }}" | Out-File C:\semaphore-proof.txt
