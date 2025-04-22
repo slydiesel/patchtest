@@ -42,13 +42,11 @@
         timeout: 300
       when: reboot_flag.stat.exists
 
-    - name: Trigger SSM inventory scan
-      command: sudo amazon-ssm-agent -register || true
-      changed_when: false
-      ignore_errors: true
-
-    - name: Run SSM inventory manually
-      command: sudo amazon-ssm-agent -inventory
+    - name: Restart SSM agent to trigger inventory sync
+      become: true
+      systemd:
+        name: amazon-ssm-agent
+        state: restarted
       changed_when: false
       ignore_errors: true
 
