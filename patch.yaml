@@ -1,12 +1,61 @@
-- name: Test Patch
+- name: Full Patch and Reboot Playbook
   hosts: all
   become: yes
+  vars:
+    upgrade_log: /tmp/semaphore-upgrade-log.txt
+
   tasks:
     - name: Run apt update
       apt:
         update_cache: yes
 
+    - name: Check for upgradable packages
+      command: apt list --upgradable
+      register: upgrade_check
+      changed_when: false
+
+    - name: Log upgradable packages to file
+      copy:
+        content: "{{ upgrade_check.stdout }}"
+        dest: "{{ upgrade_log }}"
+
+    - name: Upgrade all packages if updates are available
+      apt:
+        upgrade: dist
+      when: upgrade_check.stdout_lines | length > 1
+
+    - name: Check if a reboot is required
+      stat:
+        path: /var/run/reboot-required
+      register: reboot_flag
+
+    - name: Reboot if required
+      reboot:
+        msg: "Rebooting after patching via Semaphore"
+        pre_reboot_delay: 30
+        post_reboot_delay: 60
+        reboot_timeout: 600
+      when: reboot_flag.stat.exists
+
+    - name: Wait for host to come back up after reboot
+      wait_for_connection:
+        timeout: 300
+      when: reboot_flag.stat.exists
+
+    - name: Trigger SSM inventory scan
+      command: sudo amazon-ssm-agent -register || true
+      changed_when: false
+      ignore_errors: true
+
+    - name: Run SSM inventory manually
+      command: sudo amazon-ssm-agent -inventory
+      changed_when: false
+      ignore_errors: true
+
     - name: Write semaphore proof file
       copy:
-        content: "Semaphore was here at {{ ansible_date_time.iso8601 }}"
+        content: |
+          Semaphore ran at {{ ansible_date_time.iso8601 }}
+          Reboot required: {{ reboot_flag.stat.exists }}
+          Updates found: {{ upgrade_check.stdout_lines | length > 1 }}
         dest: /tmp/semaphore-proof.txt
