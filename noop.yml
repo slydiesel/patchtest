@@ -1,0 +1,7 @@
+- name: Hello world
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Echo something
+      debug:
+        msg: "This works"
