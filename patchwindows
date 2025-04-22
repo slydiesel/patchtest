@@ -1,12 +1,17 @@
 - name: Install Windows Updates
   hosts: all
   tasks:
-    - name: Install all available updates
+    - name: Install Security and Critical Updates via Windows Update
       win_updates:
         category_names:
           - SecurityUpdates
           - CriticalUpdates
         reboot: yes
+
+    - name: Force Defender signature update
+      win_shell: |
+        Update-MpSignature
+      register: defender_update
 
     - name: Write proof file
       win_shell: |
